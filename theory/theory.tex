@@ -1,0 +1,86 @@
+\documentclass[11pt, oneside]{article}   	
+\usepackage[margin=1.5cm]{geometry}                		
+\geometry{letterpaper}                   		 
+
+\usepackage{graphicx}							
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{caption}	
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{subcaption}
+\usepackage{tabularx}
+\usepackage{dsfont}		%for the double-stroke font for the "identity matrix 1"
+
+\newcommand{\comment}[1]{}	%does not typeset text contained in argument
+\newcommand{\tr}[0]{\mathbf{tr}}	%generates formatting for trace function 
+
+\title{Theory Behind Monte-Carlo Wavefunction Simulation}
+\author{Jonathan Curtis}
+%\date{}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+
+The Monte-Carlo wavefunction approach to problems in quantum optics is outlined well in the paper DOI: 10.1364/JOSAB.10.000524 (Molmer, Castin, Dalibard 1993). The basic idea will be outlined here in the context of a driven/dissipative cavity with a Jaynes-Cummings type non-linearity. For more information on this topic, see for example Carmichael (2015) DOI: 10.1103/PhysRevX.5.031028.  We begin with a Hamiltonian of the form 
+\[
+H_0 = \omega_0(a^\dagger a + \sigma^\dagger \sigma) + g(\sigma^\dagger a + a^\dagger \sigma)
+\]
+where the 
+\[
+\sigma = |0\rangle \langle 1| 
+\]
+is the atomic lowering operator and 
+\[
+a = \sum_{n=1}^{\infty} \sqrt{n}|n-1\rangle \langle n|
+\]
+is the photonic lowering operator. This Hamiltonian is diagonalized by a change of basis to 
+\[
+|n,\pm\rangle = \frac{1}{\sqrt{2}}\left(|n\rangle_{\textrm{cavity}}\otimes |0\rangle_{\textrm{atom}} \pm |n-1\rangle_{\textrm{cavity}}\otimes|1\rangle_{\textrm{atom}}\right)
+\]
+We consider this system in the presence of a coherent drive field and incoherent dissipation such that the drive Hamiltonian is given by 
+\[
+H_{D} = \mathcal{E} \left(a e^{i\omega_d t} + a^\dagger e^{-i\omega t}\right)
+\]
+where $\omega_d$ is the drive frequency and $\mathcal{E}$ is the drive strength. Note that this is not diagonal in terms of the polariton basis. We also have dissipation introduced by the Markovian jump operators 
+\[
+L = \sqrt{2\kappa} a
+\]
+where $\kappa$ is the cavity decay rate. The Monte-Carlo wavefunction approach calls for two ingredients. The first is a non-Hermitian Hamiltonian we can evolve the state by. This is given by 
+\[
+H = H_0 +H_D -\frac{i}{2} L^\dagger L
+\]
+which means 
+\[
+H = (\delta - i\kappa)a^\dagger a + \delta \sigma^\dagger \sigma + g(a^\dagger \sigma + \sigma^\dagger a)
+\]
+where $\delta =\omega_c - \omega_d$ is the drive detuning from the cavity and we have already passed to the frame co-rotating with the drive field. Let $dt$ be a small time step we will evolve our state over. Then if our wavefunction is given by $|\psi(t)\rangle$ then at time $t+dt$ the wavefunction is given by 
+\[
+|\psi(t+dt)\rangle = \left(\mathds{1} - iHdt\right)|\psi(t)\rangle
+\]
+This is no longer a normalized state. Instead, this state has norm (to $O(dt)$), 
+\[
+\langle \psi(t+dt)| \psi(t+dt)\rangle = 1 -idt \langle \psi(t) | (H-H^\dagger)|\psi(t)\rangle \equiv 1 - dp 
+\]
+ 
+
+
+  
+
+\end{document}  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
