@@ -45,7 +45,7 @@ H_{D} = \mathcal{E} \left(a e^{i\omega_d t} + a^\dagger e^{-i\omega t}\right)
 \]
 where $\omega_d$ is the drive frequency and $\mathcal{E}$ is the drive strength. Note that this is not diagonal in terms of the polariton basis. We also have dissipation introduced by the Markovian jump operators 
 \[
-L = \sqrt{2\kappa} a
+L = \sqrt{\kappa} a
 \]
 where $\kappa$ is the cavity decay rate. The Monte-Carlo wavefunction approach calls for two ingredients. The first is a non-Hermitian Hamiltonian we can evolve the state by. This is given by 
 \[
@@ -53,7 +53,7 @@ H = H_0 +H_D -\frac{i}{2} L^\dagger L
 \]
 which means 
 \[
-H = (\delta - i\kappa)a^\dagger a + \delta \sigma^\dagger \sigma + g(a^\dagger \sigma + \sigma^\dagger a)
+H = (\delta - \frac12i\kappa)a^\dagger a + \delta \sigma^\dagger \sigma + g(a^\dagger \sigma + \sigma^\dagger a)
 \]
 where $\delta =\omega_c - \omega_d$ is the drive detuning from the cavity and we have already passed to the frame co-rotating with the drive field. Let $dt$ be a small time step we will evolve our state over. Then if our wavefunction is given by $|\psi(t)\rangle$ then at time $t+dt$ the wavefunction is given by 
 \[
@@ -63,23 +63,69 @@ This is no longer a normalized state. Instead, this state has norm (to $O(dt)$),
 \[
 \langle \psi(t+dt)| \psi(t+dt)\rangle = 1 -idt \langle \psi(t) | (H-H^\dagger)|\psi(t)\rangle \equiv 1 - dp 
 \]
+For our Hamiltonian, this gives 
+\[
+dp = i dt \langle \psi(t) | -i\kappa a^\dagger a |\psi(t)\rangle \Rightarrow dp = \kappa n(t) dt 
+\]
+where we have defined $n(t)$ to be the expected photon population at time $t$. We now have the second part of the time evolution; the quantum jump. That is, with probability $dp = \kappa n(t) dt$ we apply the quantum jump operator and with probability $1-dp$ we don't. That means that with probability $dp$ we have the immediate stochastic state evolution of 
+\[
+|\psi(t+dt)\rangle \rightarrow \frac{1}{\sqrt{dp/dt}} L |\psi(t+dt)\rangle = \frac{1}{\sqrt{n(t)}}a \left(1-idt H\right) |\psi(t)\rangle
+\]
+
+This semi-unitary, semi-stochastic evolution is itererated to obtain arbitrarily long time dynamics. By repeating this a number of times with difference random results of each jump, an ensemble distribution of observables may efficiently be obtained. 
+
+\section{Algorithm Implementation}
+In this program we will consider a truncated photon Hilbert space with a maximum number of photons of 
+\[
+N_{\textrm{max}} >>1
+\]
+We will also choose a time interval sufficiently small such that 
+\[
+dp << 1
+\]
+but also large enough that the bath is essentially uncorrelated. For an optical wavelength (as per the Molmer, et. al. paper), this is roughly the period of the optical radiation. As such, we require 
+\[
+dt >> \frac{2\pi}{\omega} \approx 2\times 10^{-15} \si{\s}
+\]
+which is very short.  
+
+We will in practice measure times relative to the cavity decay rate, defining 
+\[
+\tau = \kappa t = t/\Gamma_{\textrm{cavity}}
+\]
+where $\Gamma_{\textrm{cavity}} = 1/\kappa$ is the cavity lifetime. We therefore will endup measuring all frequencies relative to the cavity width. Thus, in our program, the parameters that appear will actually be 
+\[
+\delta/\kappa
+\]
+\[
+g/\kappa
+\]
+\[
+\mathcal{E}/\kappa
+\]
+We will choose an appropriate dimensionless time-step 
+\[
+d\tau <<1
+\]
+and we will evolve using the algorithm outlined above for 
+\[
+N_{\textrm{steps}} >>1 
+\]
+time steps. This will then be repeated over 
+\[
+N_{\textrm{trials}} >>1 
+\]
+independent trajectories to obtain an ensemble distribution. The quantities we will be interested in are 
+\[
+\langle a^\dagger a \rangle \equiv n(t)
+\]
+\[
+ \langle a \rangle \equiv \psi(t)
+\]
+
  
 
-
-  
-
 \end{document}  
-
-
-
-
-
-
-
-
-
-
-
 
 
 
