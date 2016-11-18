@@ -12,14 +12,44 @@ import random as rand
 class HilbertSpace:
 	"""
 	This class contains the basis information about the Hilber space, like the dimensionality.
-	We will assume that there is a unique ground state and will assign it the index i=0
+	We will assume that our system is described by a tensor product of two finite dimensional Hilbert Spaces
+	Thus, we will accept upon instantiation the two dimensionalities of the factor spaces
+	We then construct the tensor product space with the appropriate dimensionality
+	We also include a method that converts from the human-readable indexing of (n1,n2) 
+	for tensor product spaces to the internal flattened indexing 
 	"""
-	def __init__(self,dim):
+	def __init__(self,d_phot,d_spin):
 		"""
 		This generates a class that represents a Hilbert space with the given number of states
 		For the purposes of computation, the states will be enumerated by a single index
+		The structure is a tensor product structure of |n_phot> X |n_spin> 
 		"""
-		self.dimension = dim	
+		self.phot_dimension = d_phot
+		self.spin_dimension = d_spin
+		self.dimension = self.phot_dimension*self.spin_dimension
+		
+	def tensorIndex(self,index_phot,index_spin):
+		"""
+		This maps an index of the form (spin_index,phot_index)
+		onto the flattened index enumerating the whole Hilbert space via the map
+		index = (index_spin)*(d_phot) + index_phot
+		This has the structure of 
+		index_spin = 0 => (index = 0,1,....d_phot-1)
+		index_spin = 1 => (index = d_phot,d_phot+1,.....2d_phot-1 )
+		
+		As an example, for d_phot = 3, d_spin = 2 then the states are 
+		00 = 0 ,10 = 1 ,20 = 2
+		01 = 4 ,11 = 5 ,21 = 6
+		where ij = |i; phot> |j; spin>
+		"""
+		return self.phot_dimension*index_spin + index_phot
+
+	def vacuumIndex(self):
+		"""
+		Returns the index of the vacuum state
+		We choose the vacuum state to be the 0 index
+		"""	
+		return 0	
 
 class State:
 	"""
@@ -34,7 +64,7 @@ class State:
 		"""
 		self.HSpace = hilb_space
 		self.ket = np.zeros(shape=self.HSpace.dimension,dtype=np.complex)	
-		self.ket[0] = 1.0	#We initialize the state into the ground state of both the cavity and atom 
+		self.ket[self.HSpace.vacuumIndex()] = 1.0	#We initialize the state into the ground state of both the cavity and atom 
 
 	def __repr__(self):	
 		"""
@@ -111,48 +141,77 @@ class Operator:
 		self*other
 		returns a new operator as this product
 		"""
-		prod = Operator(self.HSpace)
-		prod.matrix = np.dot(self.matrix,other.matrix)
-		return prod
+		Prod = Operator(self.HSpace)
+		Prod.matrix = np.dot(self.matrix,other.matrix)
+		return Prod
+
+	def __add__(self,other):
+		"""
+		Computes the sum of two matrices by their component-wise sum
+		"""
+		Sum = Operator(self.HSpace)
+		Sum.matrix = self.matrix + other.matrix
+		return Sum
+
+	def scalarMul(self,num):
+		"""
+		This implements the scalar multiplication of the operator (self) by the constant (num)
+		"""
+		Prod = Operator(self.HSpace)
+		Prod.matrix = self.matrix*num
+		return Prod
+
+	def setPhotonLower(self):
+		"""
+		This sets the current operator to the lowering operator for photons, tensor product with the identity for spins 
+		We use the formula 
+		<m; phot| PhotonLowering | n; phot> = sqrt(n) delta(n-1 == m)
+		"""
+		self.matrix *= 0.0	#first we zero out all entries
+		for i in np.arange(1,self.HSpace.phot_dimension):
+			#i goes from 1 to photon_dimension-1
+			for j in np.arange(self.HSpace.spin_dimension):
+				#j ranges over all the spin states 
+				#these are the elements <i-1; phot|<j; atom| a | j; atom>|i; phot> == sqrt(i)
+				self.matrix[self.HSpace.tensorIndex(i-1,j),self.HSpace.tensorIndex(i,j)] = np.sqrt(i) 	
+
+	def setPhotonRaise(self):
+		"""
+		Sets the current operator to the photon raising operator tensorproduct with the spin identity
+		We use the formula for the non-zero matrix elements of 
+		<m; phot| PhotonRaising|n; phot> = sqrt(m) delta(n+1==m)				
+		"""
+		self.matrix *= 0.0	#first zero out all matrix elements
+		for i in np.arange(self.HSpace.phot_dimension-1):
+			#i ranges from 0 to phot_dimension - 2 (the last state is destroyed in the truncated scheme)
+			for j in np.arange(self.HSpace.spin_dimension):
+				self.matrix[self.HSpace.tensorIndex(i+1,j),self.HSpace.tensorIndex(i,j)] = np.sqrt(i+1)
+
+	
 
 def main():
 	num_spin = 2	#number of spin states we consider 
 	num_phot = 3	#number of photon states we consider 
-	dimension = num_spin * num_phot	#the dimension of the Hilbert space consisting of the tensor product 
 
-	HS = HilbertSpace(dimension)	
+	HS = HilbertSpace(num_phot,num_spin)	
 	
 	state1 = State(HS)
 	state2 = State(HS)
+	state2.ket[0] = 0.0
+	state2.ket[HS.tensorIndex(0,1)]	= 1.0
 
-	state1.ket[1] = 1.0
-	state2.ket[1] = -1.0
-
-	state1.normalize()
-	state2.normalize()
-	
 	print state1
 	print state2
 
-	op1 = Operator(HS)
-	op2 = Operator(HS)
+	Am = Operator(HS)
+	Ap = Operator(HS)
 
-	op1.matrix *= 0.0
-	op2.matrix *= 0.0
+	Am.setPhotonLower()
+	Ap.setPhotonRaise()
 	
-	op1.matrix[0,1] = 1.0
-	op1.matrix[1,0] = 1.0
-
-	op2.matrix[1,1] = 1.0
-	op2.matrix[0,0] = -1.0
-	
-	print op1
-	print 
-	print op2
-	print 
-	print op1*op2
-	
-
+	print (Ap*Ap).onKet(state1)
+	print (Ap*Ap).onKet(state2)
+	print (Ap*Am*Ap).onKet(state1)
 if __name__=="__main__":
 	main()
 
