@@ -12,54 +12,43 @@ import random as rand
 class HilbertSpace:
 	"""
 	This class contains the basis information about the Hilber space, like the dimensionality.
+	We will assume that there is a unique ground state and will assign it the index i=0
 	"""
-	def __init__(self,nspin,nphot):
+	def __init__(self,dim):
 		"""
-		Initializes a new HilbertSpace class with the parameter for the photon space given.
-		The Hilbert space has the structure of a tensor product between two Hilbert spaces of size 
-		nspin and nphot
-		Thus, the Hilbert Space has a structure of the form C^{nspin} X C^{nphot}
+		This generates a class that represents a Hilbert space with the given number of states
+		For the purposes of computation, the states will be enumerated by a single index
 		"""
-		self.Nspin = nspin
-		self.Nphot = nphot
-		self.shape = (self.Nspin,self.Nphot)
-		self.dimension = self.Nspin*self.Nphot
-
-	def indexRange(self):
-		"""
-		Returns a list of all the possible indices in the basis of this Hilbert space
-		Equivalent to np.arange but generalized to the two-component index set
-		"""
-		return np.arange(
+		self.dimension = dim	
 
 class State:
 	"""
-	This is a class that details the data structure used to store the information about the cavity/atom state.
-	It is a tensor product of two complex vectors, one with 2 components (the atom) and one with Nmax components (cavity). 
-	Thus, it is an element of the 2*Nmax dimensional complex Hilbert space.
+	This is a class representing a datastructure for the wavefunction.
+	It is a complex-valued vector of size HilbertSpace.dimension
+	If our system is a tensor product structure, it will be assumed that the index has been flattened into a single set 
 	"""
 
-	def __init__(self, hilbertspace):
+	def __init__(self, hilb_space):
 		"""
-		Initializes a vacuum state in the Hilbert Space hilbertspace
+		Initializes a vacuum state in the Hilbert Space hilb_space
 		"""
-		self.HSpace = hilbertspace
-		self.ket = np.zeros(shape=self.HSpace.shape,dtype=np.complex)	#We structure this as a tensor product
-		"""
-		self.ket[0,i] = <i; cavity|<0; atom| state>
-		self.ket[1,i] = <i; cavity|<1; atom| state>
-		That is, the first index is the projection of the state onto the cavity ground state and the second index is the cavity state.
-		"""
-		self.ket[0,0] = 1.0	#We initialize the state into the ground state of both the cavity and atom 
+		self.HSpace = hilb_space
+		self.ket = np.zeros(shape=self.HSpace.dimension,dtype=np.complex)	
+		self.ket[0] = 1.0	#We initialize the state into the ground state of both the cavity and atom 
 
-	def innerProduct(self, state):
+	def __repr__(self):	
+		"""
+		We represent the state by simply returning the representation of the ket (and use the numpy __repr__ scaffolding)
+		"""
+
+		return self.ket.__repr__()
+
+	def innerProduct(self, other):
 		"""
 		Computes the inner product 
-		<state | self>
+		<other | self>
 		"""
-		bra = np.conj(state.ket)
-
-		return np.tensordot(bra,self.ket,axes=2)
+		return np.vdot(other.ket,self.ket)
 
 	def getNorm(self):
 		"""
@@ -80,15 +69,6 @@ class State:
 			self.ket = self.ket/np.sqrt(norm)	
 		return norm
 
-	def vacuum(self):
-		"""
-		This sets the current state to the vacuum |0>|0>
-		It also returns the amplitude <0|<0|state>
-		"""
-		amplitude = self.ket[0,0]
-		self.ket = self.ket*0.0
-		self.ket[0,0] = 1.0
-		return amplitude
 
 class Operator:
 	"""
@@ -96,59 +76,83 @@ class Operator:
 	It will mostly serve as a unifying namespace for specific instances of operators.
 	They will be represented by matrices
 	"""
-	def __init__(self,hilbertspace):
+	def __init__(self,hilb_space):
 		"""
-		Initializes an operator on the Hilbert space with photon Hilbert space of size Nmax
+		Initializes an operator on the Hilbert space given at initialization
 		Initializes to identity operator
 		"""
-		self.HSpace = hilbertspace
-
-		self.matrix = np.eye(shape=(self.HSpace.shape,self.HSpace.shape),dtype=np.complex)
+		self.HSpace = hilb_space
+		
+		#We initialize it to the identity operator
+		self.matrix = np.eye(self.HSpace.dimension,dtype=np.complex)
 		#We represent the matrix as (in the quantum matrix element notation)
-		#self.represent[i,j,k,l]= <j; cavity|<i; atom| Operator |k; atom> |l; cavity>	
-		#We initialize it to the identity operator 
+		#self.matrix[i,j]= <i| Operator | j>
+		#Where whatever indexing scheme we use for the state in the HIlbert Space is also employed here 	
+ 
+	def __repr__(self):
+		"""
+		Returns the representation of an operator as the representation of its internal matrix
+		"""
+		return self.matrix.__repr__()
+
 
 	def onKet(self, state):
 		"""
 		This implements the action of the operator (self) on the ket (state)
+		Returns the new |ket'> = operator|ket>
 		"""	
-		state.ket = np.tensordot(self.matrix,state.ket,axes=2)
-		 
+		new_state = State(self.HSpace)
+		new_state.ket =  np.inner(self.matrix,state.ket)
+		return new_state
+	
 	def __mul__(self,other):
 		"""
-		This implements the matrix multiplication of 
-		self.matrix * other.matrix
-		Note that the order matters and the self is the left operator in this case.
+		Computes the matrix product 
+		self*other
+		returns a new operator as this product
 		"""
-		prod = operator(self.Nmax)
-		prod.matrix = np.tensordot(self.matrix,other.matrix,axes=([2,0],[3,1]))		
-		return prod	
+		prod = Operator(self.HSpace)
+		prod.matrix = np.dot(self.matrix,other.matrix)
+		return prod
 
 def main():
-	HS = HilbertSpace(nspin = 2,nphot = 3)	#Create a Hilbert space with 2 spin levels and 3 photon levels
-	vac = State(HS)
-	print vac.ket
+	num_spin = 2	#number of spin states we consider 
+	num_phot = 3	#number of photon states we consider 
+	dimension = num_spin * num_phot	#the dimension of the Hilbert space consisting of the tensor product 
+
+	HS = HilbertSpace(dimension)	
 	
 	state1 = State(HS)
-	state1.ket[0,0] = 1.0
-	state1.ket[1,0] = 1.0
-	state1.ket[1,1] = 1.0
-	state1.normalize()
-	print state1.ket
-	
 	state2 = State(HS)
-	state2.ket[0,0] = 1.0
-	state2.ket[1,0] = -1.0
-	state2.ket[1,1] = 1.0
-	state2.normalize()
-	print state2.ket
-	
-	print state1.innerProduct(state2)
-	
-	identity = Operator(HS)
 
-	print identity.matrix
+	state1.ket[1] = 1.0
+	state2.ket[1] = -1.0
+
+	state1.normalize()
+	state2.normalize()
 	
+	print state1
+	print state2
+
+	op1 = Operator(HS)
+	op2 = Operator(HS)
+
+	op1.matrix *= 0.0
+	op2.matrix *= 0.0
+	
+	op1.matrix[0,1] = 1.0
+	op1.matrix[1,0] = 1.0
+
+	op2.matrix[1,1] = 1.0
+	op2.matrix[0,0] = -1.0
+	
+	print op1
+	print 
+	print op2
+	print 
+	print op1*op2
+	
+
 if __name__=="__main__":
 	main()
 
