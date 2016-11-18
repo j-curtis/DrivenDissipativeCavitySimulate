@@ -127,7 +127,29 @@ Furthermore, we will begin by initializing our cavity/atom state into the joint 
 \[
 |\psi(0)\rangle = |0\rangle_{\textrm{cavity}}\otimes |0\rangle_{\textrm{atom}}
 \]
+
+\subsection{A Note on Indexing}
+It turns out that internally, it is much easier to implement the algebra if the Hilbert Space basis is indexed by a single integer. However, it is conceptually easier to implement an indexing based on the basis index for each respective factor space in the tensor product. Thus, we have created an internal map that maps a pair of integers for the tensor product basis to the flattened internal basis. For $N_{\textrm{phot}}$ internal photon states and $N_{\textrm{spin}}$ internal spin states, the tensor product basis indices are 
+\[
+(n_{\textrm{phot}},n_{\textrm{spin}})
+\]
+which corresponds to a basis ket 
+\[
+|n_{\textrm{phot}}\rangle_{\textrm{cavity}}\otimes |n_{\textrm{spin}}\rangle_{\textrm{atom}}
+\]
+Internally, these are stored as an array of size $N_{\textrm{phot}}\times N_{\textrm{spin}}$ which each corresponds to a ket in the tensor product basis. The mapping between these two schemes is accomplished by the flattening 
+\[
+n_{\textrm{flattened}} = n_{\textrm{spin}}\times N_{\textrm{phot}} + n_{\textrm{phot}} 
+\]
+which means that the basis kets read 
+\[
+|n_{\textrm{spin}}\times N_{\textrm{phot}} + n_{\textrm{phot}}\rangle_{\textrm{flattened}} = |n_{\textrm{phot}}\rangle_{\textrm{cavity}}\otimes |n_{\textrm{spin}}\rangle_{\textrm{atom}}
+\]
+
  
+
+
+
 
 \end{document}  
 
